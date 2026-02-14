@@ -1,0 +1,78 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CaseOh's Hoodie Predictor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <div class="noise"></div>
+
+    <main class="page">
+      <header class="hero">
+        <h1>CaseOh's Hoodie Predictor</h1>
+        <p class="subtitle">
+          This is proof that CaseOh is predictable with his hoodie color choice
+        </p>
+      </header>
+
+      <section class="card prediction" aria-live="polite">
+        <div class="status" id="status">Loading data…</div>
+        <div class="prediction-grid">
+          <div class="color-display" id="colorDisplay">
+            <div class="swatch" id="colorSwatch"></div>
+            <div>
+              <div class="label">Next Stream Prediction</div>
+              <div class="value" id="colorValue">—</div>
+              <div class="confidence" id="confidenceValue">—</div>
+            </div>
+          </div>
+          <div class="previous-wrap">
+            <div class="swatch small" id="prevSwatch"></div>
+            <div>
+              <div class="label">Previous Stream</div>
+              <div class="value" id="prevColor">—</div>
+              <div class="small" id="prevDate">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="note" id="note"></div>
+      </section>
+
+      <section class="grid">
+        <div class="card stats-card">
+          <h2>Color Stats</h2>
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="small" id="statsNote">—</div>
+        </div>
+        <div class="card table-card">
+          <h2>History Table</h2>
+          <div class="table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Color</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>&copy; imok-coding 2026</span>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
