@@ -82,7 +82,9 @@ function parseDateFromSheet(value) {
   const month = Number(match[1]);
   const day = Number(match[2]);
   const year = Number(match[3]);
-  return new Date(Date.UTC(year, month - 1, day));
+  // Treat sheet dates as date-only (not time-zone specific).
+  // Use UTC noon to avoid any timezone offset shifting the calendar day.
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
 function parseCSV(text) {
@@ -289,7 +291,7 @@ function renderPrevious(entry) {
   }
 
   const formatted = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
+    timeZone: "UTC",
     month: "short",
     day: "2-digit",
     year: "numeric",
@@ -309,7 +311,7 @@ function renderHistoryTable(entries) {
   }
 
   const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
+    timeZone: "UTC",
     month: "short",
     day: "2-digit",
     year: "numeric",
@@ -434,7 +436,7 @@ async function loadPrediction(forceRefresh = false) {
 
     const lastEntry = entries[entries.length - 1];
     const lastDate = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/Chicago",
+      timeZone: "UTC",
       month: "short",
       day: "2-digit",
       year: "numeric",
