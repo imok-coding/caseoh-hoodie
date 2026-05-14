@@ -14,62 +14,102 @@
       <header class="hero">
         <h1>CaseOh Analyzer</h1>
         <p class="subtitle">
-          Hoodie predictions, stream history, and off-day tracking in one place
+          Hoodie predictions, stream history, off-day tracking, and games played
         </p>
       </header>
 
-      <section class="card prediction" aria-live="polite">
-        <div class="status" id="status">Loading data…</div>
-        <div class="prediction-grid">
-          <div class="color-display" id="colorDisplay">
-            <div class="swatch" id="colorSwatch"></div>
-            <div>
-              <div class="label">Next Stream Prediction</div>
-              <div class="value" id="colorValue">—</div>
-              <div class="confidence" id="confidenceValue">—</div>
-            </div>
-          </div>
-          <div class="previous-wrap">
-            <div class="swatch small" id="prevSwatch"></div>
-            <div>
-              <div class="label">Previous Stream</div>
-              <div class="value" id="prevColor">—</div>
-              <div class="small" id="prevDate">—</div>
-            </div>
-          </div>
-          <div class="metric-display">
-            <div class="label">Off Days</div>
-            <div class="value" id="offDayCount">—</div>
-            <div class="small">Tracked from the sheet</div>
-          </div>
-        </div>
-        <div class="note" id="note"></div>
-      </section>
+      <nav class="tabs" aria-label="Analyzer sections">
+        <button class="tab active" type="button" data-tab="hoodies">Hoodies</button>
+        <button class="tab" type="button" data-tab="games">Games</button>
+      </nav>
 
-      <section class="grid">
-        <div class="card stats-card">
-          <h2>Color Stats</h2>
-          <div class="stats-grid" id="statsGrid"></div>
-          <div class="small" id="statsNote">—</div>
-        </div>
-        <div class="card table-card">
-          <h2>History Table</h2>
-          <div class="table-wrap">
-            <table class="history-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Color</th>
-                </tr>
-              </thead>
-              <tbody id="historyBody">
-                <tr>
-                  <td>—</td>
-                  <td>—</td>
-                </tr>
-              </tbody>
-            </table>
+      <div class="tab-panel active" id="hoodiesPanel">
+        <section class="card prediction" aria-live="polite">
+          <div class="status" id="status">Loading data…</div>
+          <div class="prediction-grid">
+            <div class="color-display" id="colorDisplay">
+              <div class="swatch" id="colorSwatch"></div>
+              <div>
+                <div class="label">Next Stream Prediction</div>
+                <div class="value" id="colorValue">—</div>
+                <div class="confidence" id="confidenceValue">—</div>
+              </div>
+            </div>
+            <div class="previous-wrap">
+              <div class="swatch small" id="prevSwatch"></div>
+              <div>
+                <div class="label">Previous Stream</div>
+                <div class="value" id="prevColor">—</div>
+                <div class="small" id="prevDate">—</div>
+              </div>
+            </div>
+            <div class="metric-display">
+              <div class="label">Off Days</div>
+              <div class="value" id="offDayCount">—</div>
+              <div class="small">Tracked from the sheet</div>
+            </div>
           </div>
+          <div class="note" id="note"></div>
+        </section>
+
+        <section class="grid">
+          <div class="card stats-card">
+            <h2>Color Stats</h2>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="small" id="statsNote">—</div>
+          </div>
+          <div class="card table-card">
+            <h2>History Table</h2>
+            <div class="table-wrap">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Color</th>
+                  </tr>
+                </thead>
+                <tbody id="historyBody">
+                  <tr>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="tab-panel card games-panel" id="gamesPanel">
+        <div class="section-heading">
+          <div>
+            <div class="status" id="gamesStatus">Loading games…</div>
+            <h2>Games Played</h2>
+          </div>
+          <div class="metric-display compact">
+            <div class="label">Total Games</div>
+            <div class="stat-value" id="gamesCount">—</div>
+          </div>
+        </div>
+        <div class="table-wrap games-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Game</th>
+                <th>Channel</th>
+                <th>Video</th>
+              </tr>
+            </thead>
+            <tbody id="gamesBody">
+              <tr>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

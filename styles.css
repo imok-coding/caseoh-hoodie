@@ -104,6 +104,41 @@ h1 {
   backdrop-filter: blur(18px);
 }
 
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab {
+  min-width: 112px;
+  border: 1px solid rgba(255, 246, 228, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 246, 228, 0.04);
+  color: var(--muted);
+  cursor: pointer;
+  font: 700 13px var(--font-body);
+  padding: 10px 16px;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.tab:hover,
+.tab.active {
+  border-color: rgba(244, 216, 103, 0.55);
+  background: rgba(244, 216, 103, 0.14);
+  color: var(--text);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .prediction {
   display: flex;
   flex-direction: column;
@@ -231,6 +266,10 @@ h2 {
   background: rgba(255, 246, 228, 0.04);
 }
 
+.metric-display.compact {
+  min-width: 132px;
+}
+
 .swatch.small {
   width: 48px;
   height: 48px;
@@ -271,6 +310,16 @@ h2 {
   background: rgba(255, 246, 228, 0.05);
 }
 
+.history-table a {
+  color: var(--accent-2);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.history-table a:hover {
+  text-decoration: underline;
+}
+
 .stat-card {
   padding: 12px;
   border-radius: 14px;
@@ -281,6 +330,25 @@ h2 {
 
 .stats-card {
   grid-column: auto;
+}
+
+.games-panel {
+  gap: 18px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.section-heading h2 {
+  margin-bottom: 0;
+}
+
+.games-table-wrap {
+  max-height: 520px;
 }
 
 @media (max-width: 900px) {
@@ -341,6 +409,16 @@ h2 {
   .color-display {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .tabs,
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tab {
+    width: 100%;
   }
 }
 

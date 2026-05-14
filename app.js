@@ -1,5 +1,6 @@
 ﻿const SHEET_ID = "1TXQ_ogbnmRUAKCXSVn2WplBbJmS_uMj9VCMYltkC3d4";
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+const HOODIE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+const GAMES_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Games`;
 
 const COLOR_STYLES = {
   Blue: "#3b82f6",
@@ -25,10 +26,29 @@ const prevColorEl = document.getElementById("prevColor");
 const prevDateEl = document.getElementById("prevDate");
 const historyBodyEl = document.getElementById("historyBody");
 const offDayCountEl = document.getElementById("offDayCount");
+const tabEls = document.querySelectorAll(".tab");
+const panelEls = document.querySelectorAll(".tab-panel");
+const gamesStatusEl = document.getElementById("gamesStatus");
+const gamesCountEl = document.getElementById("gamesCount");
+const gamesBodyEl = document.getElementById("gamesBody");
 
 const REFRESH_INTERVAL_MS = 1000;
 let inFlight = false;
+let gamesInFlight = false;
 let lastRenderHash = "";
+let lastGamesRenderHash = "";
+
+tabEls.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const target = tab.dataset.tab;
+    tabEls.forEach((item) => {
+      item.classList.toggle("active", item === tab);
+    });
+    panelEls.forEach((panel) => {
+      panel.classList.toggle("active", panel.id === `${target}Panel`);
+    });
+  });
+});
 
 function getChicagoDateParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -149,6 +169,10 @@ function hasExplicitOffMarker(row) {
     const normalized = normalizeValue(value);
     return normalized === "off" || normalized === "weekend";
   });
+}
+
+function isOffRow(row) {
+  return normalizeValue(row.Date) === "off" || hasExplicitOffMarker(row);
 }
 
 function detectWornColor(row, colorKeys) {
@@ -340,6 +364,95 @@ function renderHistoryTable(entries) {
   });
 }
 
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function rowValue(row, ...keys) {
+  const entries = Object.entries(row);
+  for (const key of keys) {
+    if (row[key] !== undefined) return row[key];
+    const normalizedKey = key.toLowerCase();
+    const match = entries.find(([entryKey]) => entryKey.toLowerCase() === normalizedKey);
+    if (match) return match[1];
+  }
+  return "";
+}
+
+function renderGamesTable(games) {
+  gamesBodyEl.innerHTML = "";
+  if (!games.length) {
+    gamesBodyEl.innerHTML = "<tr><td>—</td><td>No games logged yet.</td><td>—</td><td>—</td></tr>";
+    return;
+  }
+
+  games.forEach((game) => {
+    const row = document.createElement("tr");
+    const videoCell = game.link
+      ? `<a href="${escapeHTML(game.link)}" target="_blank" rel="noopener noreferrer">Open</a>`
+      : "—";
+    row.innerHTML = `
+      <td>${escapeHTML(game.date || "—")}</td>
+      <td>${escapeHTML(game.name || "—")}</td>
+      <td>${escapeHTML(game.channel || "—")}</td>
+      <td>${videoCell}</td>
+    `;
+    gamesBodyEl.appendChild(row);
+  });
+}
+
+async function loadGames(forceRefresh = false) {
+  if (gamesInFlight) return;
+  gamesInFlight = true;
+  if (forceRefresh) {
+    gamesStatusEl.textContent = "Syncing games…";
+  }
+
+  try {
+    const response = await fetch(GAMES_CSV_URL, { cache: forceRefresh ? "no-store" : "default" });
+    if (!response.ok) throw new Error("Games fetch failed");
+
+    const text = await response.text();
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error("No games rows found");
+
+    const headers = rows[0].map((h) => h.trim());
+    const games = rows.slice(1)
+      .map((cells) => {
+        const row = {};
+        headers.forEach((key, idx) => {
+          row[key] = cells[idx] ?? "";
+        });
+        return {
+          date: rowValue(row, "Date"),
+          name: rowValue(row, "Game Name", "Game"),
+          link: rowValue(row, "YouTube Link", "Youtube Link", "Link"),
+          channel: rowValue(row, "Channel"),
+        };
+      })
+      .filter((game) => game.date || game.name || game.link || game.channel);
+
+    const hash = JSON.stringify(games);
+    if (hash !== lastGamesRenderHash) {
+      gamesStatusEl.textContent = "Games ready";
+      gamesCountEl.textContent = games.length;
+      renderGamesTable(games);
+      lastGamesRenderHash = hash;
+    }
+  } catch (err) {
+    gamesStatusEl.textContent = "Games unavailable";
+    gamesCountEl.textContent = "—";
+    renderGamesTable([]);
+  } finally {
+    gamesInFlight = false;
+  }
+}
+
 async function loadPrediction(forceRefresh = false) {
   if (inFlight) return;
   inFlight = true;
@@ -362,7 +475,7 @@ async function loadPrediction(forceRefresh = false) {
   }
 
   try {
-    const response = await fetch(CSV_URL, { cache: forceRefresh ? "no-store" : "default" });
+    const response = await fetch(HOODIE_CSV_URL, { cache: forceRefresh ? "no-store" : "default" });
     if (!response.ok) throw new Error("Sheet fetch failed");
 
     const text = await response.text();
@@ -373,7 +486,7 @@ async function loadPrediction(forceRefresh = false) {
     }
 
     const headers = rows[0].map((h) => h.trim());
-    const colorKeys = headers.slice(1);
+    const colorKeys = headers.slice(1).filter((key) => key);
 
     const dataRows = rows.slice(1).map((cells) => {
       const row = {};
@@ -387,18 +500,13 @@ async function loadPrediction(forceRefresh = false) {
     let offDays = 0;
 
     dataRows.forEach((row) => {
-      const date = parseDateFromSheet(row.Date);
-      if (!date) {
-        if (hasExplicitOffMarker(row)) {
-          offDays += 1;
-        }
-        return;
-      }
-
-      if (detectOffDay(row, colorKeys)) {
+      if (isOffRow(row)) {
         offDays += 1;
         return;
       }
+
+      const date = parseDateFromSheet(row.Date);
+      if (!date) return;
 
       const worn = detectWornColor(row, colorKeys);
       if (!worn) return;
@@ -502,8 +610,10 @@ async function loadPrediction(forceRefresh = false) {
 
 function startAutoRefresh() {
   loadPrediction();
+  loadGames();
   setInterval(() => {
     loadPrediction(true);
+    loadGames(true);
   }, REFRESH_INTERVAL_MS);
 }
 
