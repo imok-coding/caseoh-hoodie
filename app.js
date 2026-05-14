@@ -1,6 +1,7 @@
 ﻿const SHEET_ID = "1TXQ_ogbnmRUAKCXSVn2WplBbJmS_uMj9VCMYltkC3d4";
 const HOODIE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 const GAMES_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Games`;
+const ROBLOX_LOGO_SRC = "Roblox_(2025)_(App_Icon).svg.png";
 
 const COLOR_STYLES = {
   Blue: "#3b82f6",
@@ -384,6 +385,35 @@ function rowValue(row, ...keys) {
   return "";
 }
 
+function normalizeGameTitle(title) {
+  return String(title ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function countUniqueGames(games) {
+  const titles = new Set();
+  games.forEach((game) => {
+    const title = normalizeGameTitle(game.name);
+    if (title) {
+      titles.add(title);
+    }
+  });
+  return titles.size;
+}
+
+function renderGameName(name) {
+  const trimmed = String(name ?? "").trim();
+  const match = trimmed.match(/^roblox\s*:\s*(.*)$/i);
+  if (!match) return escapeHTML(trimmed || "—");
+
+  const robloxTitle = match[1].trim();
+  return `
+    <span class="game-title">
+      <img class="game-logo" src="${ROBLOX_LOGO_SRC}" alt="Roblox" />
+      <span>${escapeHTML(robloxTitle || "Roblox")}</span>
+    </span>
+  `;
+}
+
 function renderGamesTable(games) {
   gamesBodyEl.innerHTML = "";
   if (!games.length) {
@@ -398,7 +428,7 @@ function renderGamesTable(games) {
       : "—";
     row.innerHTML = `
       <td>${escapeHTML(game.date || "—")}</td>
-      <td>${escapeHTML(game.name || "—")}</td>
+      <td>${renderGameName(game.name)}</td>
       <td>${escapeHTML(game.channel || "—")}</td>
       <td>${videoCell}</td>
     `;
@@ -440,7 +470,7 @@ async function loadGames(forceRefresh = false) {
     const hash = JSON.stringify(games);
     if (hash !== lastGamesRenderHash) {
       gamesStatusEl.textContent = "Games ready";
-      gamesCountEl.textContent = games.length;
+      gamesCountEl.textContent = countUniqueGames(games);
       renderGamesTable(games);
       lastGamesRenderHash = hash;
     }
