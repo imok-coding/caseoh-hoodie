@@ -224,6 +224,13 @@ h2 {
   align-items: center;
 }
 
+.metric-display {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 246, 228, 0.12);
+  background: rgba(255, 246, 228, 0.04);
+}
+
 .swatch.small {
   width: 48px;
   height: 48px;

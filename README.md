@@ -1,6 +1,6 @@
-﻿# CaseOh Hoodie Guesser
+# CaseOh Analyzer
 
-Static site for GitHub Pages. It fetches the public Google Sheet and predicts the next hoodie color with a recency-weighted model.
+Static site for GitHub Pages. It fetches the public Google Sheet, predicts the next hoodie color with a recency-weighted model, and tracks off days.
 
 ## Setup
 - Ensure the Google Sheet is public (Anyone with link can view).

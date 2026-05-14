@@ -24,6 +24,7 @@ const prevSwatchEl = document.getElementById("prevSwatch");
 const prevColorEl = document.getElementById("prevColor");
 const prevDateEl = document.getElementById("prevDate");
 const historyBodyEl = document.getElementById("historyBody");
+const offDayCountEl = document.getElementById("offDayCount");
 
 const REFRESH_INTERVAL_MS = 1000;
 let inFlight = false;
@@ -137,7 +138,17 @@ function normalizeValue(value) {
 function detectOffDay(row, colorKeys) {
   const dateCell = normalizeValue(row.Date);
   if (dateCell.includes("off") || dateCell.includes("weekend")) return true;
-  return colorKeys.every((key) => normalizeValue(row[key]) === "");
+  return colorKeys.some((key) => {
+    const value = normalizeValue(row[key]);
+    return value === "off" || value === "weekend";
+  });
+}
+
+function hasExplicitOffMarker(row) {
+  return Object.values(row).some((value) => {
+    const normalized = normalizeValue(value);
+    return normalized === "off" || normalized === "weekend";
+  });
 }
 
 function detectWornColor(row, colorKeys) {
@@ -245,7 +256,7 @@ function setSwatch(colorName) {
   swatchEl.style.boxShadow = `0 0 30px ${hex}55`;
 }
 
-function updateStats(entries, colorKeys) {
+function updateStats(entries, colorKeys, offDays = 0) {
   const counts = Object.fromEntries(colorKeys.map((key) => [key, 0]));
   entries.forEach((entry) => {
     if (counts[entry.color] !== undefined) {
@@ -269,9 +280,10 @@ function updateStats(entries, colorKeys) {
     statsGridEl.appendChild(card);
   });
 
+  const offDayText = `${offDays} off ${offDays === 1 ? "day" : "days"}`;
   statsNoteEl.textContent = total
-    ? `Based on ${total} worn entries.`
-    : "No worn entries yet. Add WORN markers to populate stats.";
+    ? `Based on ${total} worn entries and ${offDayText}.`
+    : `No worn entries yet. ${offDayText} tracked. Add WORN markers to populate stats.`;
 }
 
 function pickFallbackColor(colorKeys, date) {
@@ -376,7 +388,12 @@ async function loadPrediction(forceRefresh = false) {
 
     dataRows.forEach((row) => {
       const date = parseDateFromSheet(row.Date);
-      if (!date) return;
+      if (!date) {
+        if (hasExplicitOffMarker(row)) {
+          offDays += 1;
+        }
+        return;
+      }
 
       if (detectOffDay(row, colorKeys)) {
         offDays += 1;
@@ -402,10 +419,12 @@ async function loadPrediction(forceRefresh = false) {
         color: displayColor,
         confidence: displayConfidence,
         counts: entries.length,
+        offDays,
       };
 
       const hash = JSON.stringify(renderState);
       if (hash !== lastRenderHash) {
+        offDayCountEl.textContent = offDays;
         colorValueEl.textContent = renderState.color;
         confidenceEl.textContent = renderState.confidence;
         if (!weekendMode) {
@@ -414,7 +433,7 @@ async function loadPrediction(forceRefresh = false) {
         if (!noteEl.textContent) {
           noteEl.textContent = renderState.note;
         }
-        updateStats(entries, colorKeys);
+        updateStats(entries, colorKeys, offDays);
         renderPrevious(entries[entries.length - 1]);
         renderHistoryTable(entries);
         lastRenderHash = hash;
@@ -449,19 +468,21 @@ async function loadPrediction(forceRefresh = false) {
       confidence: prediction.color ? `Confidence: ${prediction.confidence}%` : "",
       lastDate: lastEntry.date.toISOString(),
       lastColor: lastEntry.color,
+      offDays,
     };
 
     const noteText = `Last seen on ${lastDate}: ${lastEntry.color}. Prediction updates as your sheet grows.`;
     const hash = JSON.stringify({ ...renderState, note: noteText });
     if (hash !== lastRenderHash) {
       statusEl.textContent = renderState.status;
+      offDayCountEl.textContent = offDays;
       colorValueEl.textContent = weekendMode ? "—" : renderState.color;
       confidenceEl.textContent = weekendMode ? "" : renderState.confidence;
       if (!weekendMode) {
         setSwatch(prediction.color);
       }
       noteEl.textContent = noteText;
-      updateStats(entries, colorKeys);
+      updateStats(entries, colorKeys, offDays);
       renderPrevious(lastEntry);
       renderHistoryTable(entries);
       lastRenderHash = hash;
@@ -471,6 +492,7 @@ async function loadPrediction(forceRefresh = false) {
     noteEl.textContent = "Could not load the Google Sheet. Confirm it is public and uses text markers.";
     statsGridEl.innerHTML = "";
     statsNoteEl.textContent = "Stats unavailable.";
+    offDayCountEl.textContent = "—";
     renderPrevious(null);
     renderHistoryTable([]);
   } finally {
