@@ -43,11 +43,14 @@ const gamesLoggedCountEl = document.getElementById("gamesLoggedCount");
 const latestGameEl = document.getElementById("latestGame");
 const uniqueGameSummaryEl = document.getElementById("uniqueGameSummary");
 
-const REFRESH_INTERVAL_MS = 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const FOCUS_REFRESH_COOLDOWN_MS = 60 * 1000;
 let inFlight = false;
 let gamesInFlight = false;
 let lastRenderHash = "";
 let lastGamesRenderHash = "";
+let lastGamesCSV = "";
+let lastRefreshAt = 0;
 
 tabEls.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -330,20 +333,17 @@ function updateOverview(entries, colorKeys, offDays) {
 function updateStats(entries, colorKeys, offDays = 0) {
   const counts = getColorCounts(entries, colorKeys);
   const total = entries.length;
-  statsGridEl.innerHTML = "";
-
-  colorKeys.forEach((key) => {
+  statsGridEl.innerHTML = colorKeys.map((key) => {
     const count = counts[key];
     const percent = total ? Math.round((count / total) * 100) : 0;
-    const card = document.createElement("div");
-    card.className = "stat-card";
-    card.innerHTML = `
+    return `
+      <div class="stat-card">
       <div class="stat-label">${key}</div>
       <div class="stat-value">${count}</div>
       <div class="stat-share">${percent}% share</div>
+      </div>
     `;
-    statsGridEl.appendChild(card);
-  });
+  }).join("");
 
   const offDayText = `${offDays} off ${offDays === 1 ? "day" : "days"}`;
   statsNoteEl.textContent = total
@@ -390,7 +390,6 @@ function renderPrevious(entry) {
 }
 
 function renderHistoryTable(entries) {
-  historyBodyEl.innerHTML = "";
   if (!entries.length) {
     historyBodyEl.innerHTML = "<tr><td>—</td><td>—</td></tr>";
     return;
@@ -404,14 +403,12 @@ function renderHistoryTable(entries) {
   });
 
   const recent = entries.slice(-30).reverse();
-  recent.forEach((entry) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
+  historyBodyEl.innerHTML = recent.map((entry) => `
+    <tr>
       <td>${formatter.format(entry.date)}</td>
-      <td>${entry.color}</td>
-    `;
-    historyBodyEl.appendChild(row);
-  });
+      <td>${escapeHTML(entry.color)}</td>
+    </tr>
+  `).join("");
 }
 
 function escapeHTML(value) {
@@ -470,39 +467,41 @@ function renderGameName(name) {
 }
 
 function renderGamesTable(games) {
-  gamesBodyEl.innerHTML = "";
   if (!games.length) {
     gamesBodyEl.innerHTML = "<tr><td>—</td><td>No games logged yet.</td><td>—</td><td>—</td></tr>";
     return;
   }
 
-  games.forEach((game) => {
-    const row = document.createElement("tr");
+  gamesBodyEl.innerHTML = games.map((game) => {
     const videoCell = game.link
       ? `<a href="${escapeHTML(game.link)}" target="_blank" rel="noopener noreferrer">Open</a>`
       : "—";
-    row.innerHTML = `
+    return `
+      <tr>
       <td>${escapeHTML(game.date || "—")}</td>
       <td>${renderGameName(game.name)}</td>
       <td>${escapeHTML(game.channel || "—")}</td>
       <td>${videoCell}</td>
+      </tr>
     `;
-    gamesBodyEl.appendChild(row);
-  });
+  }).join("");
 }
 
 async function loadGames(forceRefresh = false) {
   if (gamesInFlight) return;
   gamesInFlight = true;
-  if (forceRefresh) {
-    gamesStatusEl.textContent = "Syncing games…";
-  }
 
   try {
     const response = await fetch(GAMES_CSV_URL, { cache: forceRefresh ? "no-store" : "default" });
     if (!response.ok) throw new Error("Games fetch failed");
 
     const text = await response.text();
+    if (forceRefresh && text === lastGamesCSV) {
+      gamesStatusEl.textContent = "Games ready";
+      return;
+    }
+    lastGamesCSV = text;
+
     const rows = parseCSV(text);
     if (!rows.length) throw new Error("No games rows found");
 
@@ -549,9 +548,6 @@ async function loadGames(forceRefresh = false) {
 async function loadPrediction(forceRefresh = false) {
   if (inFlight) return;
   inFlight = true;
-  if (forceRefresh) {
-    statusEl.textContent = "Syncing sheet…";
-  }
 
   const chicago = getChicagoDateParts();
   const nextStreamDate = getNextStreamDate();
@@ -703,13 +699,35 @@ async function loadPrediction(forceRefresh = false) {
   }
 }
 
+function refreshAll(forceRefresh = false) {
+  lastRefreshAt = Date.now();
+  loadPrediction(forceRefresh);
+  loadGames(forceRefresh);
+}
+
+function refreshIfStale() {
+  if (Date.now() - lastRefreshAt >= FOCUS_REFRESH_COOLDOWN_MS) {
+    refreshAll(true);
+  }
+}
+
 function startAutoRefresh() {
-  loadPrediction();
-  loadGames();
+  refreshAll();
   setInterval(() => {
-    loadPrediction(true);
-    loadGames(true);
+    refreshAll(true);
   }, REFRESH_INTERVAL_MS);
+
+  if (typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        refreshIfStale();
+      }
+    });
+  }
+
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("focus", refreshIfStale);
+  }
 }
 
 startAutoRefresh();
