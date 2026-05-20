@@ -32,6 +32,16 @@ const panelEls = document.querySelectorAll(".tab-panel");
 const gamesStatusEl = document.getElementById("gamesStatus");
 const gamesCountEl = document.getElementById("gamesCount");
 const gamesBodyEl = document.getElementById("gamesBody");
+const streamCountEl = document.getElementById("streamCount");
+const topColorEl = document.getElementById("topColor");
+const topColorShareEl = document.getElementById("topColorShare");
+const offDayRateEl = document.getElementById("offDayRate");
+const trackedDayCountEl = document.getElementById("trackedDayCount");
+const insightTopColorEl = document.getElementById("insightTopColor");
+const insightLastStreamEl = document.getElementById("insightLastStream");
+const gamesLoggedCountEl = document.getElementById("gamesLoggedCount");
+const latestGameEl = document.getElementById("latestGame");
+const uniqueGameSummaryEl = document.getElementById("uniqueGameSummary");
 
 const REFRESH_INTERVAL_MS = 1000;
 let inFlight = false;
@@ -281,14 +291,44 @@ function setSwatch(colorName) {
   swatchEl.style.boxShadow = `0 0 30px ${hex}55`;
 }
 
-function updateStats(entries, colorKeys, offDays = 0) {
+function getColorCounts(entries, colorKeys) {
   const counts = Object.fromEntries(colorKeys.map((key) => [key, 0]));
   entries.forEach((entry) => {
     if (counts[entry.color] !== undefined) {
       counts[entry.color] += 1;
     }
   });
+  return counts;
+}
 
+function getTopColor(counts) {
+  return Object.entries(counts).reduce(
+    (best, [color, count]) => count > best.count ? { color, count } : best,
+    { color: null, count: 0 },
+  );
+}
+
+function updateOverview(entries, colorKeys, offDays) {
+  const total = entries.length;
+  const trackedDays = total + offDays;
+  const counts = getColorCounts(entries, colorKeys);
+  const top = getTopColor(counts);
+  const topPercent = total && top.count ? Math.round((top.count / total) * 100) : 0;
+  const offPercent = trackedDays ? Math.round((offDays / trackedDays) * 100) : 0;
+  const lastEntry = entries[entries.length - 1];
+
+  streamCountEl.textContent = total;
+  trackedDayCountEl.textContent = trackedDays;
+  topColorEl.textContent = top.color || "—";
+  topColorShareEl.textContent = top.color ? `${top.count} streams, ${topPercent}% share` : "Waiting on hoodie data";
+  offDayCountEl.textContent = offDays;
+  offDayRateEl.textContent = trackedDays ? `${offPercent}% of tracked days` : "Tracked from Hoodie";
+  insightTopColorEl.textContent = top.color ? `${top.color} (${top.count})` : "—";
+  insightLastStreamEl.textContent = lastEntry ? `${lastEntry.color} on ${formatSheetDate(lastEntry.date)}` : "—";
+}
+
+function updateStats(entries, colorKeys, offDays = 0) {
+  const counts = getColorCounts(entries, colorKeys);
   const total = entries.length;
   statsGridEl.innerHTML = "";
 
@@ -309,6 +349,15 @@ function updateStats(entries, colorKeys, offDays = 0) {
   statsNoteEl.textContent = total
     ? `Based on ${total} worn entries and ${offDayText}.`
     : `No worn entries yet. ${offDayText} tracked. Add WORN markers to populate stats.`;
+}
+
+function formatSheetDate(date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
 }
 
 function pickFallbackColor(colorKeys, date) {
@@ -392,12 +441,18 @@ function normalizeGameTitle(title) {
 function countUniqueGames(games) {
   const titles = new Set();
   games.forEach((game) => {
-    const title = normalizeGameTitle(game.name);
+    const title = normalizeGameTitle(displayGameTitle(game.name));
     if (title) {
       titles.add(title);
     }
   });
   return titles.size;
+}
+
+function displayGameTitle(name) {
+  const trimmed = String(name ?? "").trim();
+  const match = trimmed.match(/^roblox\s*:\s*(.*)$/i);
+  return match ? match[1].trim() || "Roblox" : trimmed;
 }
 
 function renderGameName(name) {
@@ -469,14 +524,22 @@ async function loadGames(forceRefresh = false) {
 
     const hash = JSON.stringify(games);
     if (hash !== lastGamesRenderHash) {
+      const uniqueCount = countUniqueGames(games);
+      const latestGame = games[games.length - 1];
       gamesStatusEl.textContent = "Games ready";
-      gamesCountEl.textContent = countUniqueGames(games);
+      gamesCountEl.textContent = uniqueCount;
+      gamesLoggedCountEl.textContent = games.length;
+      latestGameEl.textContent = latestGame ? displayGameTitle(latestGame.name) || "—" : "—";
+      uniqueGameSummaryEl.textContent = uniqueCount ? `${uniqueCount} unique titles` : "No games logged";
       renderGamesTable(games);
       lastGamesRenderHash = hash;
     }
   } catch (err) {
     gamesStatusEl.textContent = "Games unavailable";
     gamesCountEl.textContent = "—";
+    gamesLoggedCountEl.textContent = "—";
+    latestGameEl.textContent = "—";
+    uniqueGameSummaryEl.textContent = "—";
     renderGamesTable([]);
   } finally {
     gamesInFlight = false;
@@ -562,7 +625,6 @@ async function loadPrediction(forceRefresh = false) {
 
       const hash = JSON.stringify(renderState);
       if (hash !== lastRenderHash) {
-        offDayCountEl.textContent = offDays;
         colorValueEl.textContent = renderState.color;
         confidenceEl.textContent = renderState.confidence;
         if (!weekendMode) {
@@ -572,6 +634,7 @@ async function loadPrediction(forceRefresh = false) {
           noteEl.textContent = renderState.note;
         }
         updateStats(entries, colorKeys, offDays);
+        updateOverview(entries, colorKeys, offDays);
         renderPrevious(entries[entries.length - 1]);
         renderHistoryTable(entries);
         lastRenderHash = hash;
@@ -592,12 +655,7 @@ async function loadPrediction(forceRefresh = false) {
     const prediction = pickPrediction(scores);
 
     const lastEntry = entries[entries.length - 1];
-    const lastDate = new Intl.DateTimeFormat("en-US", {
-      timeZone: "UTC",
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    }).format(lastEntry.date);
+    const lastDate = formatSheetDate(lastEntry.date);
 
     const renderState = {
       status: "Prediction ready",
@@ -613,7 +671,6 @@ async function loadPrediction(forceRefresh = false) {
     const hash = JSON.stringify({ ...renderState, note: noteText });
     if (hash !== lastRenderHash) {
       statusEl.textContent = renderState.status;
-      offDayCountEl.textContent = offDays;
       colorValueEl.textContent = weekendMode ? "—" : renderState.color;
       confidenceEl.textContent = weekendMode ? "" : renderState.confidence;
       if (!weekendMode) {
@@ -621,6 +678,7 @@ async function loadPrediction(forceRefresh = false) {
       }
       noteEl.textContent = noteText;
       updateStats(entries, colorKeys, offDays);
+      updateOverview(entries, colorKeys, offDays);
       renderPrevious(lastEntry);
       renderHistoryTable(entries);
       lastRenderHash = hash;
@@ -631,6 +689,13 @@ async function loadPrediction(forceRefresh = false) {
     statsGridEl.innerHTML = "";
     statsNoteEl.textContent = "Stats unavailable.";
     offDayCountEl.textContent = "—";
+    streamCountEl.textContent = "—";
+    topColorEl.textContent = "—";
+    topColorShareEl.textContent = "Waiting on data";
+    offDayRateEl.textContent = "Tracked from Hoodie";
+    trackedDayCountEl.textContent = "—";
+    insightTopColorEl.textContent = "—";
+    insightLastStreamEl.textContent = "—";
     renderPrevious(null);
     renderHistoryTable([]);
   } finally {

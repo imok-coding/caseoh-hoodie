@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -12,11 +12,49 @@
 
     <main class="page">
       <header class="hero">
-        <h1>CaseOh Analyzer</h1>
-        <p class="subtitle">
-          Hoodie predictions, stream history, off-day tracking, and games played
-        </p>
+        <div class="hero-copy">
+          <div class="eyebrow">Live stream data dashboard</div>
+          <h1>CaseOh Analyzer</h1>
+          <p class="subtitle">
+            A clean read on CaseOh's hoodie patterns, off days, recent streams, and games played.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="status" id="status">Loading data…</div>
+          <div class="hero-prediction">
+            <div class="swatch hero-swatch" id="colorSwatch"></div>
+            <div>
+              <div class="label">Next Hoodie Prediction</div>
+              <div class="hero-value" id="colorValue">—</div>
+              <div class="confidence" id="confidenceValue">—</div>
+            </div>
+          </div>
+          <div class="note" id="note"></div>
+        </div>
       </header>
+
+      <section class="overview-grid" aria-label="CaseOh stream summary">
+        <div class="overview-card">
+          <div class="label">Tracked Streams</div>
+          <div class="overview-value" id="streamCount">—</div>
+          <div class="small">Hoodie entries logged</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">Top Hoodie</div>
+          <div class="overview-value" id="topColor">—</div>
+          <div class="small" id="topColorShare">Waiting on data</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">Off Days</div>
+          <div class="overview-value" id="offDayCount">—</div>
+          <div class="small" id="offDayRate">Tracked from Hoodie</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">Unique Games</div>
+          <div class="overview-value" id="gamesCount">—</div>
+          <div class="small">From the Games sheet</div>
+        </div>
+      </section>
 
       <nav class="tabs" aria-label="Analyzer sections">
         <button class="tab active" type="button" data-tab="hoodies">Hoodies</button>
@@ -24,42 +62,69 @@
       </nav>
 
       <div class="tab-panel active" id="hoodiesPanel">
-        <section class="card prediction" aria-live="polite">
-          <div class="status" id="status">Loading data…</div>
-          <div class="prediction-grid">
-            <div class="color-display" id="colorDisplay">
-              <div class="swatch" id="colorSwatch"></div>
+        <section class="feature-grid">
+          <div class="card prediction-card">
+            <div class="section-heading">
               <div>
-                <div class="label">Next Stream Prediction</div>
-                <div class="value" id="colorValue">—</div>
-                <div class="confidence" id="confidenceValue">—</div>
+                <div class="status">Prediction Engine</div>
+                <h2>Next Stream Read</h2>
               </div>
             </div>
-            <div class="previous-wrap">
-              <div class="swatch small" id="prevSwatch"></div>
-              <div>
-                <div class="label">Previous Stream</div>
-                <div class="value" id="prevColor">—</div>
-                <div class="small" id="prevDate">—</div>
+            <div class="prediction-grid">
+              <div class="previous-wrap">
+                <div class="swatch small" id="prevSwatch"></div>
+                <div>
+                  <div class="label">Previous Stream</div>
+                  <div class="value" id="prevColor">—</div>
+                  <div class="small" id="prevDate">—</div>
+                </div>
               </div>
-            </div>
-            <div class="metric-display">
-              <div class="label">Off Days</div>
-              <div class="value" id="offDayCount">—</div>
-              <div class="small">Tracked from the sheet</div>
+              <div class="metric-display">
+                <div class="label">Data Coverage</div>
+                <div class="value" id="trackedDayCount">—</div>
+                <div class="small">Streams plus off days</div>
+              </div>
             </div>
           </div>
-          <div class="note" id="note"></div>
+
+          <div class="card insight-card">
+            <div class="status">Signal Notes</div>
+            <h2>Pattern Snapshot</h2>
+            <div class="insight-list">
+              <div>
+                <span class="label">Most common</span>
+                <strong id="insightTopColor">—</strong>
+              </div>
+              <div>
+                <span class="label">Last logged</span>
+                <strong id="insightLastStream">—</strong>
+              </div>
+              <div>
+                <span class="label">Model mix</span>
+                <strong>Transitions + recency</strong>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="grid">
           <div class="card stats-card">
-            <h2>Color Stats</h2>
+            <div class="section-heading">
+              <div>
+                <div class="status">Distribution</div>
+                <h2>Color Stats</h2>
+              </div>
+            </div>
             <div class="stats-grid" id="statsGrid"></div>
             <div class="small" id="statsNote">—</div>
           </div>
           <div class="card table-card">
-            <h2>History Table</h2>
+            <div class="section-heading">
+              <div>
+                <div class="status">Timeline</div>
+                <h2>Recent Hoodie History</h2>
+              </div>
+            </div>
             <div class="table-wrap">
               <table class="history-table">
                 <thead>
@@ -87,8 +152,18 @@
             <h2>Games Played</h2>
           </div>
           <div class="metric-display compact">
-            <div class="label">Unique Games</div>
-            <div class="stat-value" id="gamesCount">—</div>
+            <div class="label">Logged Rows</div>
+            <div class="stat-value" id="gamesLoggedCount">—</div>
+          </div>
+        </div>
+        <div class="games-summary">
+          <div>
+            <span class="label">Most Recent Game</span>
+            <strong id="latestGame">—</strong>
+          </div>
+          <div>
+            <span class="label">Unique Titles</span>
+            <strong id="uniqueGameSummary">—</strong>
           </div>
         </div>
         <div class="table-wrap games-table-wrap">
